@@ -1,12 +1,20 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require('path'); // এটি ফাইল পাথ হ্যান্ডেল করার জন্য দরকার
 const db = require('./db_handler');
 const app = express();
 
 app.use(bodyParser.json());
-app.use(express.static('public'));
 
-// নিবন্ধন এপিআই
+// ১. এটি নিশ্চিত করবে যে public ফোল্ডারের ভেতর থেকে CSS/JS ফাইলগুলো লোড হবে
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ২. হোম পেজ লোড করার লজিক (যাতে Cannot GET / না আসে)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ৩. নিবন্ধন এপিআই
 app.post('/api/register', (req, res) => {
     const { phone, password, refer } = req.body;
     const date = new Date().toLocaleDateString('en-GB');
@@ -17,7 +25,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// লগইন এপিআই
+// ৪. লগইন এপিআই
 app.post('/api/login', (req, res) => {
     const { phone, password } = req.body;
     db.get("SELECT * FROM users WHERE phone = ? AND password = ?", [phone, password], (err, row) => {
@@ -26,7 +34,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// প্যাকেজ কেনার এপিআই (সার্ভার সাইড ভ্যালিডেশন)
+// ৫. প্যাকেজ কেনার এপিআই
 app.post('/api/buy-package', (req, res) => {
     const { phone, planName, price, dailyIncome } = req.body;
     db.get("SELECT balance FROM users WHERE phone = ?", [phone], (err, row) => {
@@ -44,5 +52,10 @@ app.post('/api/buy-package', (req, res) => {
     });
 });
 
-const PORT = 3000;
+// ৬. অন্য যেকোনো ভুল লিঙ্কে ঢুকলে হোম পেজে নিয়ে যাবে
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+const PORT = process.env.PORT || 3000; // Render-এর পোর্টের জন্য এটি জরুরি
 app.listen(PORT, () => console.log(`TrustPay Pro running on port ${PORT}`));
